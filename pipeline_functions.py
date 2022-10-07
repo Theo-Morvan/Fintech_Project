@@ -11,6 +11,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import optuna
 from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 import ipdb
 
 def _log_transform_income(X):
@@ -43,7 +44,7 @@ def imbalance_correction(y):
 
     pass
 
-def create_optuna_pipeline(X_train,y_train, X_val, y_val):
+def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
 
     def optuna_objective(trial):
         params = {
@@ -63,6 +64,33 @@ def create_optuna_pipeline(X_train,y_train, X_val, y_val):
 
         sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
         model = XGBClassifier(**params)
+        model.fit(X_train, y_train, sample_weight=sample_weights)
+        preds = model.predict(X_val)
+        # ipdb.set_trace()
+        final_score = f1_score(y_val, preds)
+        return final_score
+
+    return optuna_objective
+
+def create_optuna_pipeline_lightgbm(X_train,y_train, X_val, y_val):
+
+    def optuna_objective(trial):
+        params = {
+            "objective": "binary",
+            "metric": "binary_logloss",
+            # "verbosity": -1,
+            "boosting_type": "gbdt",
+            "lambda_l1": trial.suggest_float("lambda_l1", 1e-8, 10.0, log=True),
+            "lambda_l2": trial.suggest_float("lambda_l2", 1e-8, 10.0, log=True),
+            "num_leaves": trial.suggest_int("num_leaves", 2, 256),
+            "feature_fraction": trial.suggest_float("feature_fraction", 0.4, 1.0),
+            "bagging_fraction": trial.suggest_float("bagging_fraction", 0.4, 1.0),
+            "bagging_freq": trial.suggest_int("bagging_freq", 1, 7),
+            "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
+            "learning_rate": trial.suggest_float("learning_rate",1e-5,1e-1,log=True)
+        }
+        sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
+        model = LGBMClassifier(**params)
         model.fit(X_train, y_train, sample_weight=sample_weights)
         preds = model.predict(X_val)
         # ipdb.set_trace()
