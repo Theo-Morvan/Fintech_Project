@@ -22,7 +22,7 @@ if __name__ == "__main__":
     X_train_final = pipeline.fit_transform(X_train)
     X_val_final = pipeline.transform(X_val)
     X_test_final = pipeline.transform(X_test)
-    optuna_objective = create_optuna_pipeline(X_train_final, y_train, X_val_final, y_val)
+    optuna_objective = create_optuna_pipeline_lightgbm(X_train_final, y_train, X_val_final, y_val)
     study = optuna.create_study(direction="maximize")
     study.optimize(optuna_objective, n_trials=30, n_jobs=-1)
     print("Number of finished trials: ", len(study.trials))
@@ -33,7 +33,8 @@ if __name__ == "__main__":
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
     model = XGBClassifier(**trial.params)
-    model.fit(X_train_final,y_train)
+    sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
+    model.fit(X_train_final,y_train, sample_weight=sample_weights)
     preds = model.predict_proba(X_test_final)
     preds_class = model.predict(X_test_final)
     matrix_confusion = confusion_matrix(y_test, preds_class)
