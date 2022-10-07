@@ -15,6 +15,7 @@ root = os.getcwd()
 data_path = os.path.join(dirname(root), 'data')
 path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
+path_output = os.path.join(root + '/data', 'default_predictions.csv')
 
 if __name__ == "__main__":
     # Load data
@@ -61,4 +62,4 @@ if __name__ == "__main__":
 
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
 
-    df_preds.to_csv(os.path.join(data_path, 'default_predictions.csv', Header=True, Index=False))
+    df_preds.to_csv(path_output, header=True, index=False)
