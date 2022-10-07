@@ -8,7 +8,7 @@ from pipeline_functions import *
 from sklearn.model_selection import train_test_split
 import optuna
 from xgboost import XGBClassifier
-path = os.path.join("LendingGame3_Round3","PastLoans.csv")
+path = os.path.join("data","PastLoans.csv")
 
 if __name__ == "__main__":
     df = pd.read_csv(path, index_col='id')
