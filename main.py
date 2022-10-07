@@ -32,7 +32,7 @@ if __name__ == "__main__":
     X_test_final = pipeline.transform(X_test)
 
     # Optimize hyperparameters and train
-    optuna_objective = create_optuna_pipeline(X_train_final, y_train, X_val_final, y_val)
+    optuna_objective = create_optuna_pipeline_xgboost(X_train_final, y_train, X_val_final, y_val)
     study = optuna.create_study(direction="maximize")
     study.optimize(optuna_objective, n_trials=30, n_jobs=-1)
     print("Number of finished trials: ", len(study.trials))
@@ -61,5 +61,6 @@ if __name__ == "__main__":
     df_preds["id"] = df_new_preds.index
 
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
+    df_preds["rate"] = df_preds.break_even_rate + 0.02
 
-    df_preds.to_csv(path_output, header=True, index=False)
+    df_preds[['id', 'rate']].to_csv(path_output, header=True, index=False)
