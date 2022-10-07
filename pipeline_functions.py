@@ -1,3 +1,4 @@
+from pyclbr import Function
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler,FunctionTransformer
 from sklearn.utils.class_weight import compute_sample_weight
@@ -12,20 +13,35 @@ import optuna
 from xgboost import XGBClassifier
 import ipdb
 
+def _log_transform_income(X):
+    X = X.copy()
+    values = X["income"].values + 1 #on évite les valeurs 0
+    log_values = np.log(values)
+    X["income"] = log_values
+    return X
+
 def full_pipeline():
+
+    log_transformer = FunctionTransformer(_log_transform_income, validate=False)
+
     cols_one_hot_encoding = ["employment"]
     cols_scaling = ["income"]
-    path_through_columns = ["digital1","digital2","digital3"]
+    path_through_columns = ["digital3"]
     preprocessor = ColumnTransformer([
         ("employment",OneHotEncoder(drop="first"),cols_one_hot_encoding),
         ("income",StandardScaler(),cols_scaling),
         ("digital_columns", "passthrough",path_through_columns)
     ])
     pipeline = Pipeline([
-        ("columns_preprocessing",preprocessor)
+        ("income_transformer", log_transformer),
+        ("columns_preprocessing",preprocessor),
     ]
     )
     return pipeline
+
+def imbalance_correction(y):
+
+    pass
 
 def create_optuna_pipeline(X_train,y_train, X_val, y_val):
 
@@ -49,8 +65,8 @@ def create_optuna_pipeline(X_train,y_train, X_val, y_val):
         model = XGBClassifier(**params)
         model.fit(X_train, y_train, sample_weight=sample_weights)
         preds = model.predict(X_val)
-        ipdb.set_trace()
-        final_score = recall_score(y_val, preds)
+        # ipdb.set_trace()
+        final_score = f1_score(y_val, preds)
         return final_score
 
     return optuna_objective
