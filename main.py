@@ -10,6 +10,7 @@ from sklearn.metrics import confusion_matrix
 import optuna
 from xgboost import XGBClassifier
 path = os.path.join("data","PastLoans.csv")
+path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
 
 if __name__ == "__main__":
     df = pd.read_csv(path, index_col='id')
@@ -37,4 +38,9 @@ if __name__ == "__main__":
     preds_class = model.predict(X_test_final)
     matrix_confusion = confusion_matrix(y_test, preds_class)
     print(matrix_confusion)
-    ipdb.set_trace()
+
+    df_new_preds = pd.read_csv(path_new_set,index_col="id")
+    X_new = df_new_preds.iloc[:,:]
+    X_new_scaled = pipeline.transform(X_new)
+    predictions = model.predict_proba(X_new_scaled)
+    df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
