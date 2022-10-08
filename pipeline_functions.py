@@ -1,4 +1,5 @@
 from pyclbr import Function
+from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler,FunctionTransformer
 from sklearn.utils.class_weight import compute_sample_weight
@@ -114,6 +115,15 @@ def optimal_mix_predictions(preds_1,preds_2,**kwargs):
         final_class = (value>=0.5)*1
     return final_class
 
+def optimal_mix_probas(preds_1,preds_2,**kwargs):
+    if "weight" in list(kwargs.keys()):
+        weight = kwargs["weight"]
+        value = weight*preds_1 + (1-weight)*preds_2
+    else:
+        weight = 1/2
+        value = weight*preds_1 + (1-weight)*preds_2
+    return value
+
 def create_complete_pipeline(X_train,y_train, X_val, y_val):
     def optuna_objective(trial):
         params_lgbm = {
@@ -157,15 +167,33 @@ def create_complete_pipeline(X_train,y_train, X_val, y_val):
         # ipdb.set_trace()
         params_cuts = {
             "weight": trial.suggest_float("weight",0,1),
-            "cutting_threshold":trial.suggest_float("cutting_threshold",0,1)
+            # "cutting_threshold":trial.suggest_float("cutting_threshold",0.,1)
         }
         preds = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_cuts)
         # ipdb.set_trace()
-        final_score = f1_score(y_val, preds)
+        final_score = recall_score(y_val, preds)
 
         # final_model = StackingRegressor(estimators=estimators, final_estimator=HistGradientBoostingRegressor())
         return final_score
     
+    return optuna_objective
+
+def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
+
+    def optuna_objective(trial):
+        params = {
+            "l1_ratio":trial.suggest_float("l1_ratio",0,1),
+            "penalty":"elasticnet",
+            "solver":"saga",
+            "class_weight":"balanced",
+        }
+        model = LogisticRegression(**params)
+        X = np.concatenate((preds_1.reshape(-1,1),preds_2.reshape(-1,1)),axis=1)
+        model.fit(X, y_true)
+
+        preds = model.predict(X)
+        score = f1_score(y_true,preds)
+        return score
     return optuna_objective
 
 liste_lgbm = ["lambda_l1",
