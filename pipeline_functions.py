@@ -115,7 +115,7 @@ def optimal_mix_predictions(preds_1,preds_2,**kwargs):
         final_class = (value>=0.5)*1
     return final_class
 
-def optimal_mix_probas(preds_1,preds_2,**kwargs):
+def optimal_mix_probas(preds_1, preds_2, **kwargs):
     if "weight" in list(kwargs.keys()):
         weight = kwargs["weight"]
         value = weight*preds_1 + (1-weight)*preds_2

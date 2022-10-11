@@ -41,16 +41,16 @@ if __name__ == "__main__":
     optuna_objective = create_complete_pipeline(X_train_final, y_train, X_val_final, y_val)
     study = optuna.create_study(direction="maximize")
     study.optimize(optuna_objective, n_trials=5, n_jobs=-1)
-    print("Number of finished trials: ", len(study.trials))
-    print("Best trial:")
+    #print("Number of finished trials: ", len(study.trials))
+    #print("Best trial:")
     trial = study.best_trial
-    print("  Value: {}".format(trial.value))
+    #print("  Value: {}".format(trial.value))
     params_xgb={}
     params_lgbm={} 
     params_weights = {}
-    print("  Params: ")
+    #print("  Params: ")
     for key, value in trial.params.items():
-        print("    {}: {}".format(key, value))
+        #print("    {}: {}".format(key, value))
         if key in liste_lgbm:
             params_lgbm[key]=value
         if key in liste_xgb:
@@ -63,57 +63,60 @@ if __name__ == "__main__":
 
     sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
     model_xgb.fit(X_train_final,y_train, sample_weight=sample_weights)
-    model_lgbm.fit(X_train_final,y_train, sample_weight=sample_weights)
+    #model_lgbm.fit(X_train_final,y_train, sample_weight=sample_weights)
 
-    preds_lgbm = model_lgbm.predict_proba(X_train_final)[:,1]
+    # Optimize hyperparameters
+    #preds_lgbm = model_lgbm.predict_proba(X_train_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_train_final)[:,1]
-    optuna_logistic = create_logistic_regression_pipeline(preds_lgbm,preds_xgb, y_train)
+    #optuna_logistic = create_logistic_regression_pipeline(preds_lgbm, preds_xgb, y_train)
     study = optuna.create_study(direction="maximize")
-    study.optimize(optuna_logistic, n_trials=5, n_jobs=-1)
-    print(study.best_trial.params)
+    #study.optimize(optuna_logistic, n_trials=5, n_jobs=-1)
+    #print(study.best_trial.params)
+
     params_logistic = study.best_trial.params
     params_logistic["penalty"]="elasticnet"
     params_logistic["solver"]="saga"
     params_logistic["class_weight"]="balanced"
-    model_logistic = LogisticRegression(**study.best_trial.params)
-    model_logistic.fit(
-        np.concatenate((preds_lgbm.reshape(-1,1),preds_xgb.reshape(-1,1)),axis=1),
-        y_train
-        )
+    #model_logistic = LogisticRegression(**study.best_trial.params)
+    #model_logistic.fit(
+        #np.concatenate((preds_lgbm.reshape(-1,1), preds_xgb.reshape(-1,1)), axis=1),
+        #y_train
+        #)
 
-    preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
+    #preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_test_final)[:,1]
 
     
-    preds_class = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_weights)
-    matrix_confusion = confusion_matrix(y_test, preds_class)
+    #preds_class = optimal_mix_predictions(preds_lgbm, preds_xgb, **params_weights)
+    #matrix_confusion = confusion_matrix(y_test, preds_class)
 
-    print('Confusion matrix:')
-    print(matrix_confusion)
+    #print('Confusion matrix:')
+    #print(matrix_confusion)
 
     # Predict default probabilities
-    df_new_preds = pd.read_csv(path_new_set,index_col="id")
+    df_new_preds = pd.read_csv(path_new_set, index_col="id")
     X_new = df_new_preds.iloc[:,:]
     X_new_scaled = pipeline.transform(X_new)
-    preds_lgbm = model_lgbm.predict_proba(X_new_scaled)
+    #preds_lgbm = model_lgbm.predict_proba(X_new_scaled)
     preds_xgb = model_xgb.predict_proba(X_new_scaled)
 
     
-    final_proba = model_logistic.predict_proba(
-        np.concatenate((preds_lgbm.reshape(-1,1),preds_xgb.reshape(-1,1)),axis=1)
-        )[:,1]
+    #final_proba = model_logistic.predict_proba(
+    #    np.concatenate((preds_lgbm.reshape(-1,1), preds_xgb.reshape(-1,1)),axis=1)
+    #    )[:,1]
     
-    predictions = optimal_mix_probas(preds_lgbm,preds_xgb,**params_weights)
-    df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
+    #predictions = optimal_mix_probas(preds_lgbm, preds_xgb, **params_weights)
+    #df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
+    df_preds = pd.DataFrame(preds_xgb, columns=["Proba no Default", "Proba Default"])
     df_preds["id"] = df_new_preds.index
 
     # Emit rates
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
-    df_preds[['id', 'break_even_rate']].to_csv(os.path.join(path_output, "break_even_rate.csv"), Header=True, Index=False)
+    df_preds[["id", "break_even_rate"]].to_csv(os.path.join(path_output, "break_even_rate.csv"), header=True, index=False)
 
     df_preds["rate"] = df_preds.break_even_rate + 0.03 + df_preds.break_even_rate/10
     df_preds.loc[df_preds["rate"] > 1, "rate"] = np.nan
-    df_preds[['id', 'rate']].to_csv(os.path.join(path_output, 'final_ratings.csv'), Header=True, Index=False)
+    df_preds[["id", "rate"]].to_csv(os.path.join(path_output, "final_ratings.csv"), header=True, index=False)
 
     # Plot
     #fig, ax = plt.subplots(1,1,figsize=(12,10))
