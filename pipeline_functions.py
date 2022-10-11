@@ -178,7 +178,7 @@ def create_complete_pipeline(X_train,y_train, X_val, y_val):
     
     return optuna_objective
 
-def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
+def create_logistic_regression_pipeline(preds_1, preds_2, y_true):
 
     def optuna_objective(trial):
         params = {
@@ -188,7 +188,7 @@ def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
             "class_weight":"balanced",
         }
         model = LogisticRegression(**params)
-        X = np.concatenate((preds_1.reshape(-1,1),preds_2.reshape(-1,1)),axis=1)
+        X = np.concatenate((preds_1.reshape(-1,1), preds_2.reshape(-1,1)), axis=1)
         model.fit(X, y_true)
 
         preds = model.predict(X)

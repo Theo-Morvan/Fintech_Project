@@ -19,11 +19,11 @@ root = os.getcwd()
 data_path = os.path.join(dirname(root), 'data')
 path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
-path_output = os.path.join(root + '/data', 'default_predictions.csv')
+path_output = root + '/data'
 
 
-path = os.path.join("data","PastLoans.csv")
-path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
+#path = os.path.join("data","PastLoans.csv")
+#path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
 
 if __name__ == "__main__":
     # Load data
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     print('Confusion matrix:')
     print(matrix_confusion)
 
-    # Predict
+    # Predict default probabilities
     df_new_preds = pd.read_csv(path_new_set,index_col="id")
     X_new = df_new_preds.iloc[:,:]
     X_new_scaled = pipeline.transform(X_new)
@@ -107,12 +107,17 @@ if __name__ == "__main__":
     df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
     df_preds["id"] = df_new_preds.index
 
+    # Emit rates
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
-    df_preds["rate"] = df_preds.break_even_rate + 0.02
-    fig, ax =plt.subplots(1,1,figsize=(12,10))
-    sns.distplot(final_proba)
-    plt.show()
-    # ipdb.set_trace()
-    # df_preds[['id', 'rate']].to_csv(path_output, header=True, index=False)
+    df_preds[['id', 'break_even_rate']].to_csv(os.path.join(path_output, "break_even_rate.csv"), Header=True, Index=False)
 
-    
+    df_preds["rate"] = df_preds.break_even_rate + 0.03 + df_preds.break_even_rate/10
+    df_preds.loc[df_preds["rate"] > 1, "rate"] = np.nan
+    df_preds[['id', 'rate']].to_csv(os.path.join(path_output, 'final_ratings.csv'), Header=True, Index=False)
+
+    # Plot
+    #fig, ax = plt.subplots(1,1,figsize=(12,10))
+    #sns.distplot(final_proba)
+    #plt.show()
+
+    # ipdb.set_trace()
