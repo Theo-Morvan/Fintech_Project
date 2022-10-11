@@ -20,7 +20,7 @@ root = os.getcwd()
 data_path = os.path.join(dirname(root), 'data')
 path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
-path_output = os.path.join(root + '/data', 'default_predictions.csv')
+path_output = os.path.join(root + '/data', 'default_predictions_backtesting.csv')
 
 
 path = os.path.join("data","PastLoans.csv")
@@ -113,16 +113,16 @@ if __name__ == "__main__":
     
     predictions = optimal_mix_probas(preds_lgbm,preds_xgb,**params_weights)
     # ipdb.set_trace()
-    df_preds = pd.DataFrame(final_proba, columns=["Proba no Default","Proba Default"])
+    df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
     # ipdb.set_trace()
     df_preds["id"] = df_new_preds.index
 
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
     df_preds["rate"] = df_preds.break_even_rate + 0.02
     # ipdb.set_trace()
-    fig, ax =plt.subplots(1,1,figsize=(12,10))
-    sns.distplot(df_preds["rate"])
-    plt.show()
+    # fig, ax =plt.subplots(1,1,figsize=(12,10))
+    # sns.distplot(df_preds["rate"])
+    # plt.show()
     # ipdb.set_trace()
     df_preds[['id', 'rate']].to_csv(path_output, header=True, index=False)
 
