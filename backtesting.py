@@ -36,5 +36,4 @@ if __name__ == "__main__":
 
     print(f"Profits made with this strategy during backtesting : {df_clients_won['profit'].sum()}")
 
-
     
