@@ -39,36 +39,38 @@ if __name__ == "__main__":
     X_train_final = pipeline.fit_transform(X_train)
     X_val_final = pipeline.transform(X_val)
     X_test_final = pipeline.transform(X_test)
-    optuna_objective = create_complete_pipeline(X_train_final, y_train, X_val_final, y_val)
-    study = optuna.create_study(direction="maximize")
-    study.optimize(optuna_objective, n_trials=5, n_jobs=-1)
+
+    # Mix prediction optim
+    #optuna_objective = create_complete_pipeline(X_train_final, y_train, X_val_final, y_val)
+    #study = optuna.create_study(direction="maximize")
+    #study.optimize(optuna_objective, n_trials=5, n_jobs=-1)
     #print("Number of finished trials: ", len(study.trials))
     #print("Best trial:")
-    trial = study.best_trial
+    #trial = study.best_trial
     #print("  Value: {}".format(trial.value))
-    params_xgb={}
-    params_lgbm={} 
-    params_weights = {}
+    #params_xgb={}
+    #params_lgbm={} 
+    #params_weights = {}
     #print("  Params: ")
-    for key, value in trial.params.items():
+    #for key, value in trial.params.items():
         #print("    {}: {}".format(key, value))
-        if key in liste_lgbm:
-            params_lgbm[key]=value
-        if key in liste_xgb:
-            params_xgb[key]=value
-        else:
-            params_weights[key]=value
+    #    if key in liste_lgbm:
+    #        params_lgbm[key]=value
+    #    if key in liste_xgb:
+    #        params_xgb[key]=value
+    #    else:
+    #        params_weights[key]=value
 
-    model_lgbm = LGBMClassifier(**params_lgbm)
-    model_xgb = XGBClassifier(**params_xgb)
-
-    sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
-    model_xgb.fit(X_train_final,y_train, sample_weight=sample_weights)
+    #model_lgbm = LGBMClassifier(**params_lgbm)
+    #model_xgb = XGBClassifier(**params_xgb)
+#
+    #sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
+    #model_xgb.fit(X_train_final,y_train, sample_weight=sample_weights)
     #model_lgbm.fit(X_train_final,y_train, sample_weight=sample_weights)
 
     # Optimize hyperparameters
     #preds_lgbm = model_lgbm.predict_proba(X_train_final)[:,1]
-    preds_xgb = model_xgb.predict_proba(X_train_final)[:,1]
+    #preds_xgb = model_xgb.predict_proba(X_train_final)[:,1]
 
     #optuna_logistic = create_logistic_regression_pipeline(preds_lgbm, preds_xgb, y_train)
     #study = optuna.create_study(direction="maximize")
@@ -79,7 +81,11 @@ if __name__ == "__main__":
     optuna_objective = create_optuna_pipeline_xgboost(X_train_final, y_train, X_val_final, y_val)
     study = optuna.create_study(direction="maximize")
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    study.optimize(optuna_objective, n_trials=50, n_jobs=-1, show_progress_bar=True)
+    study.optimize(optuna_objective, n_trials=10, n_jobs=-1, show_progress_bar=True)
+    trial = study.best_trial
+
+    model_xgb = XGBClassifier(**trial.params)
+    model_xgb.fit(X_train_final,y_train)
 
     #params_logistic = study.best_trial.params
     #params_logistic["penalty"]="elasticnet"
@@ -93,13 +99,12 @@ if __name__ == "__main__":
 
     #preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_test_final)[:,1]
-
-    
+    preds_class = model_xgb.predict(X_test_final)
     #preds_class = optimal_mix_predictions(preds_lgbm, preds_xgb, **params_weights)
-    #matrix_confusion = confusion_matrix(y_test, preds_class)
 
-    #print('Confusion matrix:')
-    #print(matrix_confusion)
+    matrix_confusion = confusion_matrix(y_test, preds_class)
+    print('Confusion matrix:')
+    print(matrix_confusion)
 
     # Predict default probabilities
     df_new_preds = pd.read_csv(path_new_set, index_col="id")
