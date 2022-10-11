@@ -10,15 +10,14 @@ path_new_set = os.path.join(data_path, "NewApplications_3_Round1.csv")
 path_proba = os.path.join(root + '/data', 'default_predictions.csv') #the dataset with the probabilities of default
 columns_test = ["competing1","competing2","rate"]
 
-def compute_interest_rates(default_probas, M, index):
+def compute_interest_rates(default_probas, a, b, index):
 
     df_preds = pd.DataFrame(default_probas, columns=["Proba no Default","Proba Default"])
     # ipdb.set_trace()
     df_preds["id"] = index
 
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
-    df_preds["rate"] = df_preds.break_even_rate + 0.1 + df_preds.break_even_rate/10
+    df_preds["rate"] = df_preds.break_even_rate*a + b
     df_preds.loc[df_preds["rate"] > 1, "rate"] = np.nan
-
 
     return df_preds

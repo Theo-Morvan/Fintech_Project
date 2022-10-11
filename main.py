@@ -80,15 +80,15 @@ if __name__ == "__main__":
     study = optuna.create_study(direction="maximize")
     study.optimize(optuna_objective, n_trials=30, n_jobs=-1)
 
-    params_logistic = study.best_trial.params
-    params_logistic["penalty"]="elasticnet"
-    params_logistic["solver"]="saga"
-    params_logistic["class_weight"]="balanced"
+    #params_logistic = study.best_trial.params
+    #params_logistic["penalty"]="elasticnet"
+    #params_logistic["solver"]="saga"
+    #params_logistic["class_weight"]="balanced"
     #model_logistic = LogisticRegression(**study.best_trial.params)
-    #model_logistic.fit(
-        #np.concatenate((preds_lgbm.reshape(-1,1), preds_xgb.reshape(-1,1)), axis=1),
-        #y_train
-        #)
+    #model_logistic.fit(   
+    #    np.concatenate((preds_lgbm.reshape(-1,1), preds_xgb.reshape(-1,1)), axis=1),
+    #    y_train
+    #    )
 
     #preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_test_final)[:,1]
