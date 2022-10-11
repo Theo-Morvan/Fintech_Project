@@ -11,9 +11,7 @@ path_proba = os.path.join(root + '/data', 'default_predictions.csv') #the datase
 columns_test = ["competing1","competing2","rate"]
 
 def compute_interest_rates(default_probas, a, b, index):
-
     df_preds = pd.DataFrame(default_probas, columns=["Proba no Default","Proba Default"])
-    # ipdb.set_trace()
     df_preds["id"] = index
 
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])

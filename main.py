@@ -78,7 +78,8 @@ if __name__ == "__main__":
     # Optimize hyperparameters and train
     optuna_objective = create_optuna_pipeline_xgboost(X_train_final, y_train, X_val_final, y_val)
     study = optuna.create_study(direction="maximize")
-    study.optimize(optuna_objective, n_trials=30, n_jobs=-1)
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    study.optimize(optuna_objective, n_trials=30, n_jobs=-1, show_progress_bar=True)
 
     #params_logistic = study.best_trial.params
     #params_logistic["penalty"]="elasticnet"

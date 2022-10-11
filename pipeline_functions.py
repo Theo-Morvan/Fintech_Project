@@ -64,7 +64,7 @@ def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
             }
         # minimum child weight, larger the term more conservative the tree.
 
-        sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
+        sample_weights = compute_sample_weight(class_weight="balanced", y=y_train)
         model = XGBClassifier(**params)
         model.fit(X_train, y_train, sample_weight=sample_weights)
         preds = model.predict(X_val)
