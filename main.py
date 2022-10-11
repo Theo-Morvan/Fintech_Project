@@ -69,10 +69,16 @@ if __name__ == "__main__":
     # Optimize hyperparameters
     #preds_lgbm = model_lgbm.predict_proba(X_train_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_train_final)[:,1]
+
     #optuna_logistic = create_logistic_regression_pipeline(preds_lgbm, preds_xgb, y_train)
-    study = optuna.create_study(direction="maximize")
+    #study = optuna.create_study(direction="maximize")
     #study.optimize(optuna_logistic, n_trials=5, n_jobs=-1)
     #print(study.best_trial.params)
+
+    # Optimize hyperparameters and train
+    optuna_objective = create_optuna_pipeline_xgboost(X_train_final, y_train, X_val_final, y_val)
+    study = optuna.create_study(direction="maximize")
+    study.optimize(optuna_objective, n_trials=30, n_jobs=-1)
 
     params_logistic = study.best_trial.params
     params_logistic["penalty"]="elasticnet"
@@ -110,6 +116,7 @@ if __name__ == "__main__":
     #df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
     df_preds = pd.DataFrame(preds_xgb, columns=["Proba no Default", "Proba Default"])
     df_preds["id"] = df_new_preds.index
+    df_preds[["id", "Proba Default"]].to_csv(os.path.join(path_output, "default_predictions.csv"), header=True, index=False)
 
     # Emit rates
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
