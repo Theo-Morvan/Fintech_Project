@@ -81,15 +81,9 @@ if __name__ == "__main__":
         np.concatenate((preds_lgbm.reshape(-1,1),preds_xgb.reshape(-1,1)),axis=1),
         y_train
     )
-    model_qda = QuadraticDiscriminantAnalysis()
-    model_qda.fit(
-        np.concatenate((preds_lgbm.reshape(-1,1),preds_xgb.reshape(-1,1)),axis=1),
-        y_train
-    )
+    # ipdb.set_trace()
     preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_test_final)[:,1]
-
-    
     preds_class = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_weights)
     matrix_confusion = confusion_matrix(y_test, preds_class)
 
@@ -107,23 +101,18 @@ if __name__ == "__main__":
     final_proba = model_logistic.predict_proba(
         np.concatenate((preds_lgbm[:,1].reshape(-1,1),preds_xgb[:,1].reshape(-1,1)),axis=1)
         )
-    final_proba = model_qda.predict_proba(
-        np.concatenate((preds_lgbm[:,1].reshape(-1,1),preds_xgb[:,1].reshape(-1,1)),axis=1)
-        )
-    
-    predictions = optimal_mix_probas(preds_lgbm,preds_xgb,**params_weights)
-    # ipdb.set_trace()
-    df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
-    # ipdb.set_trace()
-    df_preds["id"] = df_new_preds.index
 
-    df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
-    df_preds["rate"] = df_preds.break_even_rate + 0.02
+    predictions = optimal_mix_probas(preds_lgbm,preds_xgb,**params_weights)
+    df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
+    df_preds.to_csv(path_output, header=True, index=False)
+    # ipdb.set_trace()
+    # df_preds["id"] = df_new_preds.index
     # ipdb.set_trace()
     # fig, ax =plt.subplots(1,1,figsize=(12,10))
     # sns.distplot(df_preds["rate"])
     # plt.show()
     # ipdb.set_trace()
-    df_preds[['id', 'rate']].to_csv(path_output, header=True, index=False)
+    # df_preds[['id', 'Proba Default']].to_csv(path_output, header=True, index=False)
+    
 
     
