@@ -20,7 +20,7 @@ root = os.getcwd()
 data_path = os.path.join(dirname(root),"Fintech_Project", 'data')
 path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
-path_proba = os.path.join(root + '/data', 'default_predictions_backtesting.csv') #the dataset with the probabilities of default
+path_proba = os.path.join(root + '/data', 'default_predictions_backtesting_logistic.csv') #the dataset with the probabilities of default
 columns_test = ["competing1","competing2","rate"]
 
 

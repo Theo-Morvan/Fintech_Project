@@ -20,11 +20,13 @@ root = os.getcwd()
 data_path = os.path.join(dirname(root), 'data')
 path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
-path_output = os.path.join(root + '/data', 'default_predictions_backtesting.csv')
+path_output = os.path.join(root + '/data', 'default_predictions_backtesting_logistic.csv')
 
 
 path = os.path.join("data","PastLoans.csv")
 path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
+
+save = False
 
 if __name__ == "__main__":
     # Load data
@@ -32,16 +34,16 @@ if __name__ == "__main__":
     X = df.iloc[:,:-1]
     y = df.iloc[:,-1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
     # Create pipeline
     pipeline = full_pipeline()
     X_train_final = pipeline.fit_transform(X_train)
-    X_val_final = pipeline.transform(X_val)
+    # X_val_final = pipeline.transform(X_val)
     X_test_final = pipeline.transform(X_test)
-    optuna_objective = create_complete_pipeline(X_train_final, y_train, X_val_final, y_val)
+    optuna_objective = create_complete_pipeline(X_train_final, y_train,5)
     study = optuna.create_study(direction="maximize")
-    study.optimize(optuna_objective, n_trials=50, n_jobs=-1)
+    study.optimize(optuna_objective, n_trials=30, n_jobs=-1)
     print("Number of finished trials: ", len(study.trials))
     print("Best trial:")
     trial = study.best_trial
@@ -85,10 +87,15 @@ if __name__ == "__main__":
     preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
     preds_xgb = model_xgb.predict_proba(X_test_final)[:,1]
     preds_class = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_weights)
+    logisic_predictions= model_logistic.predict(np.concatenate((preds_lgbm.reshape(-1,1),preds_xgb.reshape(-1,1)),axis=1))
     matrix_confusion = confusion_matrix(y_test, preds_class)
+
 
     print('Confusion matrix:')
     print(matrix_confusion)
+
+    print(f"f1_score is with mix XGB/LGBM: {f1_score(y_test,preds_class)}")
+    print(f"f1_score with logisitic regression upon models : {f1_score(y_test, preds_class)}")
 
     # Predict
     df_new_preds = pd.read_csv(path_new_set,index_col="id")
@@ -103,8 +110,11 @@ if __name__ == "__main__":
         )
 
     predictions = optimal_mix_probas(preds_lgbm,preds_xgb,**params_weights)
-    df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
-    df_preds.to_csv(path_output, header=True, index=False)
+    y_preds = predictions.argmax(axis=1)
+    df_preds = pd.DataFrame(final_proba, columns=["Proba no Default","Proba Default"])
+    ipdb.set_trace()
+    if save :
+        df_preds.to_csv(path_output, header=True, index=False)
     # ipdb.set_trace()
     # df_preds["id"] = df_new_preds.index
     # ipdb.set_trace()

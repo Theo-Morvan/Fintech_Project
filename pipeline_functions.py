@@ -1,7 +1,7 @@
-from pyclbr import Function
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler,FunctionTransformer
+from sklearn.model_selection import KFold
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.metrics import f1_score, recall_score, accuracy_score
 import pandas as pd
@@ -16,6 +16,7 @@ from lightgbm import LGBMClassifier
 import ipdb
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor
 
+
 def _log_transform_income(X):
     X = X.copy()
     values = X["income"].values + 1 #on évite les valeurs 0
@@ -23,28 +24,44 @@ def _log_transform_income(X):
     X["income"] = log_values
     return X
 
+def income_categories(x):
+    category = 0
+    if x<=0.:
+        category = 0
+    elif (0<x) & (x<=17500):
+        category = 1
+    elif (17500<x) & (x<=24000):
+        category = 2
+    elif (24000<x) & (x<=37000):
+        category = 3
+    else:
+        category = 4
+    return category
+
+def _adding_category_column(X):
+    X = X.copy()
+    X["category_income"] = X["income"].apply(income_categories)
+    return X
+
 def full_pipeline():
 
     log_transformer = FunctionTransformer(_log_transform_income, validate=False)
-
-    cols_one_hot_encoding = ["employment"]
+    category_creator = FunctionTransformer(_adding_category_column, validate=False)
+    cols_one_hot_encoding = ["employment","category_income"]
     cols_scaling = ["income"]
     path_through_columns = ["digital3"]
     preprocessor = ColumnTransformer([
-        ("employment",OneHotEncoder(drop="first"),cols_one_hot_encoding),
+        ("employment",OneHotEncoder(),cols_one_hot_encoding),
         ("income",StandardScaler(),cols_scaling),
         ("digital_columns", "passthrough",path_through_columns)
     ])
     pipeline = Pipeline([
         ("income_transformer", log_transformer),
+        ("category_income",category_creator),
         ("columns_preprocessing",preprocessor),
     ]
     )
     return pipeline
-
-def imbalance_correction(y):
-
-    pass
 
 def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
 
@@ -71,6 +88,41 @@ def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
         # ipdb.set_trace()
         final_score = f1_score(y_val, preds)
         return final_score
+
+    return optuna_objective
+
+def create_optuna_objective_xgboost_cv(X,y, number_cv):
+
+    def optuna_objective(trial):
+        scores = np.zeros(number_cv)
+        kf = KFold(n_splits = 5, shuffle = True, random_state = 42)
+        params = {
+                # L2 regularization weight.
+                "lambda": trial.suggest_float("lambda", 1e-8, 1.0, log=True),
+                # L1 regularization weight.
+                "alpha": trial.suggest_float("alpha", 1e-8, 1.0, log=True),
+                # sampling ratio for training data.
+                "subsample": trial.suggest_float("subsample", 0.2, 1.0),
+                # sampling according to each tree.
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.2, 1.0),
+                "max_depth": trial.suggest_int("max_depth", 3, 9, step=2),
+                "min_child_weight" : trial.suggest_int("min_child_weight", 2, 10),
+                "n_estimators": trial.suggest_int("n_estimators",50,150, step=25)
+            }
+        # minimum child weight, larger the term more conservative the tree.
+
+        sample_weights = compute_sample_weight(class_weight="balanced",y = y)
+        
+        for num, (train_id, valid_id) in enumerate(kf.split(X)):
+            X_train, X_valid = X[train_id], X[valid_id]
+            y_train, y_valid = y[train_id], y[valid_id]
+            model = XGBClassifier(**params)
+            model.fit(X_train, y_train, sample_weight=sample_weights)
+            preds = model.predict(X_valid)
+        # ipdb.set_trace()
+            score_cv= f1_score(y_valid, preds)
+            scores[num] = score_cv
+        return np.mean(scores)
 
     return optuna_objective
 
@@ -124,7 +176,7 @@ def optimal_mix_probas(preds_1,preds_2,**kwargs):
         value = weight*preds_1 + (1-weight)*preds_2
     return value
 
-def create_complete_pipeline(X_train,y_train, X_val, y_val):
+def create_complete_pipeline(X, y, number_cv):
     def optuna_objective(trial):
         params_lgbm = {
         "objective": "binary",
@@ -153,28 +205,37 @@ def create_complete_pipeline(X_train,y_train, X_val, y_val):
             "min_child_weight" : trial.suggest_int("min_child_weight", 2, 10),
             "n_estimators": trial.suggest_int("n_estimators",50,150, step=25)
         }
-        sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
-        model_lgbm = LGBMClassifier(**params_lgbm)
-        model_xgb = XGBClassifier(**params_xgb)
-        estimators = [
-            ("lgbm", model_lgbm),
-            ("xgboost", model_xgb)
-        ]
-        model_lgbm.fit(X_train, y_train, sample_weight=sample_weights)
-        model_xgb.fit(X_train, y_train, sample_weight=sample_weights)
-        preds_lgbm = model_lgbm.predict_proba(X_val)[:,1]
-        preds_xgb = model_xgb.predict_proba(X_val)[:,1]
-        # ipdb.set_trace()
+
         params_cuts = {
             "weight": trial.suggest_float("weight",0,1),
             # "cutting_threshold":trial.suggest_float("cutting_threshold",0.,1)
         }
-        preds = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_cuts)
-        # ipdb.set_trace()
-        final_score = f1_score(y_val, preds)
 
+        
+
+        scores = np.zeros(number_cv)
+        kf = KFold(n_splits = 5, shuffle = True, random_state = 42)
+        for num, (train_id, valid_id) in enumerate(kf.split(X)):
+            X_train, X_valid = np.take(X,train_id,axis=0), np.take(X,valid_id,axis=0)
+            y_train, y_valid = np.take(y,train_id,axis=0), np.take(y, valid_id, axis=0)
+            model_lgbm = LGBMClassifier(**params_lgbm)
+            model_xgb = XGBClassifier(**params_xgb)
+            logistic_model = LogisticRegression()
+            sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
+            model_lgbm.fit(X_train, y_train, sample_weight=sample_weights)
+            model_xgb.fit(X_train, y_train, sample_weight=sample_weights)
+            # logistic_model.fit(X_train, y_train, sample_weight=sample_weights)
+            preds_lgbm = model_lgbm.predict_proba(X_valid)[:,1]
+            preds_xgb = model_xgb.predict_proba(X_valid)[:,1]
+            # preds_logistique = logistic_model.predict_proba(X_valid)[:,1]
+        # ipdb.set_trace()
+
+            preds = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_cuts)
+        # ipdb.set_trace()
+            score_recall_cv = f1_score(y_valid, preds)
+            scores[num] = score_recall_cv
         # final_model = StackingRegressor(estimators=estimators, final_estimator=HistGradientBoostingRegressor())
-        return final_score
+        return np.mean(scores)
     
     return optuna_objective
 
