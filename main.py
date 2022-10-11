@@ -11,6 +11,7 @@ from sklearn.metrics import confusion_matrix
 import optuna
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import ipdb
 
 

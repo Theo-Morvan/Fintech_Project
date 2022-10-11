@@ -171,7 +171,7 @@ def create_complete_pipeline(X_train,y_train, X_val, y_val):
         }
         preds = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_cuts)
         # ipdb.set_trace()
-        final_score = recall_score(y_val, preds)
+        final_score = f1_score(y_val, preds)
 
         # final_model = StackingRegressor(estimators=estimators, final_estimator=HistGradientBoostingRegressor())
         return final_score
