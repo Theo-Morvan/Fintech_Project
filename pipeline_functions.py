@@ -91,7 +91,7 @@ def create_optuna_pipeline_lightgbm(X_train,y_train, X_val, y_val):
             "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
             "learning_rate": trial.suggest_float("learning_rate",1e-5,1e-1,log=True)
         }
-        sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
+        sample_weights = compute_sample_weight(class_weight="balanced", y=y_train)
         model = LGBMClassifier(**params)
         model.fit(X_train, y_train, sample_weight=sample_weights)
         preds = model.predict(X_val)
