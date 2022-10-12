@@ -167,13 +167,24 @@ def optimal_mix_predictions(preds_1,preds_2,**kwargs):
         final_class = (value>=0.5)*1
     return final_class
 
-def optimal_mix_probas(preds_1,preds_2,**kwargs):
-    if "weight" in list(kwargs.keys()):
-        weight = kwargs["weight"]
-        value = weight*preds_1 + (1-weight)*preds_2
+def optimal_mix_probas(preds_1,preds_2,preds_3,return_class=False,**kwargs):
+    weights = [element for element in kwargs.keys() if "weight" in element].sort()
+    
+    try:
+        len(weights) == 3
+    except:
+        weights = ["weight_1","weight_2","weight_3"]
+
+    weights_values = [kwargs[element] for element in weights]
+    if len(weights)==3:
+        print(kwargs)
+        value = kwargs[weights[0]]*preds_1+kwargs[weights[1]]*preds_2+kwargs[weights[2]]*preds_3
+        value = value/sum(weights_values)
     else:
-        weight = 1/2
-        value = weight*preds_1 + (1-weight)*preds_2
+        weight = 1/3
+        value = weight*preds_1 + weight*preds_2 + weight*preds_3
+    if return_class:
+        value = (value>=0.5)*1
     return value
 
 def create_complete_pipeline(X, y, number_cv):
@@ -201,13 +212,15 @@ def create_complete_pipeline(X, y, number_cv):
             "subsample": trial.suggest_float("subsample", 0.2, 1.0),
             # sampling according to each tree.
             "colsample_bytree": trial.suggest_float("colsample_bytree", 0.2, 1.0),
-            "max_depth": trial.suggest_int("max_depth", 3, 9, step=2),
+            "max_depth": trial.suggest_int("max_de  pth", 3, 9, step=2),
             "min_child_weight" : trial.suggest_int("min_child_weight", 2, 10),
             "n_estimators": trial.suggest_int("n_estimators",50,150, step=25)
         }
 
         params_cuts = {
-            "weight": trial.suggest_float("weight",0,1),
+            "weight_1": trial.suggest_float("weight_1",0,1),
+            "weight_2": trial.suggest_float("weight_2",0,1),
+            "weight_3": trial.suggest_float("weight_3",0,1),
             # "cutting_threshold":trial.suggest_float("cutting_threshold",0.,1)
         }
 
@@ -224,13 +237,13 @@ def create_complete_pipeline(X, y, number_cv):
             sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
             model_lgbm.fit(X_train, y_train, sample_weight=sample_weights)
             model_xgb.fit(X_train, y_train, sample_weight=sample_weights)
-            # logistic_model.fit(X_train, y_train, sample_weight=sample_weights)
+            logistic_model.fit(X_train, y_train, sample_weight=sample_weights)
             preds_lgbm = model_lgbm.predict_proba(X_valid)[:,1]
             preds_xgb = model_xgb.predict_proba(X_valid)[:,1]
-            # preds_logistique = logistic_model.predict_proba(X_valid)[:,1]
+            preds_logistique = logistic_model.predict_proba(X_valid)[:,1]
         # ipdb.set_trace()
 
-            preds = optimal_mix_predictions(preds_lgbm,preds_xgb,**params_cuts)
+            preds = optimal_mix_probas(preds_lgbm,preds_xgb,preds_logistique,True,**params_cuts)
         # ipdb.set_trace()
             score_recall_cv = f1_score(y_valid, preds)
             scores[num] = score_recall_cv
@@ -275,4 +288,4 @@ liste_xgb = [
     "min_child_weight",
     "n_estimators"
 ]
-liste_weights = ["weight","cutting_threshold"]
+liste_weights = ["weight_1","weight_2","weight_3","cutting_threshold"]
