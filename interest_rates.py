@@ -10,7 +10,7 @@ def compute_interest_rates(default_probas, M,index):
     df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
     df_preds["rate"] = df_preds.break_even_rate + M
 
-    return df_preds
+    return df_preds[["id","rate"]]
 
 def compute_interest_rates_reject_higher_1(default_probas, M,index):
 
