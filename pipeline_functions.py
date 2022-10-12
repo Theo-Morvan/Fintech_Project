@@ -233,7 +233,7 @@ def create_complete_pipeline(X, y, number_cv):
             y_train, y_valid = np.take(y,train_id,axis=0), np.take(y, valid_id, axis=0)
             model_lgbm = LGBMClassifier(**params_lgbm)
             model_xgb = XGBClassifier(**params_xgb)
-            logistic_model = QuadraticDiscriminantAnalysis()
+            logistic_model = LogisticRegression()
             sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
             model_lgbm.fit(X_train, y_train, sample_weight=sample_weights)
             model_xgb.fit(X_train, y_train, sample_weight=sample_weights)

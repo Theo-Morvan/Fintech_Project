@@ -18,7 +18,7 @@ import ipdb
 dirname = os.path.dirname
 root = os.getcwd()
 data_path = os.path.join(dirname(root), 'data')
-path = os.path.join(data_path,"PastLoans.csv")
+path = os.path.join(data_path,"augmented_data.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
 path_output = os.path.join(root + '/data', 'default_predictions_backtesting_mix_models.csv')
 
