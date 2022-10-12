@@ -66,12 +66,13 @@ if __name__ == "__main__":
     params_logistic["penalty"]='elasticnet'
     params_logistic["solver"]="saga"
     params_logistic["class_weight"]="balanced"
-    model_logistic = LogisticRegression(penalty="elasticnet",solver="saga",class_weight="balanced",l1_ratio=0.5)
+    # model_logistic = LogisticRegression(penalty="elasticnet",solver="saga",class_weight="balanced",l1_ratio=0.5)
+    model_logistic = QuadraticDiscriminantAnalysis()
 
     sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
     model_xgb.fit(X_train_final,y_train, sample_weight=sample_weights)
     model_lgbm.fit(X_train_final,y_train, sample_weight=sample_weights)
-    model_logistic.fit(X_train_final,y_train, sample_weight=sample_weights)
+    model_logistic.fit(X_train_final,y_train)
 
     # ipdb.set_trace()
     preds_lgbm = model_lgbm.predict_proba(X_test_final)[:,1]
@@ -104,8 +105,14 @@ if __name__ == "__main__":
     predictions = optimal_mix_probas(preds_lgbm,preds_xgb,preds_logistic,**params_weights)
     y_preds = predictions.argmax(axis=1)
     df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
+    df_preds_xgb = pd.DataFrame(preds_xgb, columns=["Proba no Default","Proba Default"])
+    df_preds_lgbm = pd.DataFrame(preds_lgbm, columns=["Proba no Default","Proba Default"])
+    df_preds_other = df_preds_xgb = pd.DataFrame(preds_logistic, columns=["Proba no Default","Proba Default"])
     if save :
         df_preds.to_csv(path_output, header=True, index=False)
+        df_preds.to_csv(os.path.join(root + '/data', "preds_xgb.csv"), header=True, index=False)
+        df_preds.to_csv(os.path.join(root + '/data', "preds_lgbm.csv"), header=True, index=False)
+        df_preds.to_csv(os.path.join(root + '/data', "preds_logistic.csv"), header=True, index=False)
     ipdb.set_trace()
     # ipdb.set_trace()
     # df_preds["id"] = df_new_preds.index
