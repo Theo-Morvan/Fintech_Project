@@ -15,7 +15,7 @@ from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 import ipdb
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor
-
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 def _log_transform_income(X):
     X = X.copy()
@@ -51,7 +51,7 @@ def full_pipeline():
     cols_scaling = ["income"]
     path_through_columns = ["digital3"]
     preprocessor = ColumnTransformer([
-        ("employment",OneHotEncoder(),cols_one_hot_encoding),
+        ("employment",OneHotEncoder(drop="first"),cols_one_hot_encoding),
         ("income",StandardScaler(),cols_scaling),
         ("digital_columns", "passthrough",path_through_columns)
     ])
@@ -233,11 +233,11 @@ def create_complete_pipeline(X, y, number_cv):
             y_train, y_valid = np.take(y,train_id,axis=0), np.take(y, valid_id, axis=0)
             model_lgbm = LGBMClassifier(**params_lgbm)
             model_xgb = XGBClassifier(**params_xgb)
-            logistic_model = LogisticRegression()
+            logistic_model = QuadraticDiscriminantAnalysis()
             sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
             model_lgbm.fit(X_train, y_train, sample_weight=sample_weights)
             model_xgb.fit(X_train, y_train, sample_weight=sample_weights)
-            logistic_model.fit(X_train, y_train, sample_weight=sample_weights)
+            logistic_model.fit(X_train, y_train)
             preds_lgbm = model_lgbm.predict_proba(X_valid)[:,1]
             preds_xgb = model_xgb.predict_proba(X_valid)[:,1]
             preds_logistique = logistic_model.predict_proba(X_valid)[:,1]
