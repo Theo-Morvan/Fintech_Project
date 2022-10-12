@@ -20,11 +20,7 @@ root = os.getcwd()
 data_path = os.path.join(dirname(root),"Fintech_Project", 'data')
 path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
-<<<<<<< HEAD
-path_proba = os.path.join(root + '/data', 'default_predictions_backtesting_logistic.csv') #the dataset with the probabilities of default
-=======
-path_proba = os.path.join(root + '/data', 'default_predictions_backtesting.csv') #the dataset with the probabilities of default
->>>>>>> main
+path_proba = os.path.join(root + '/data', 'default_predictions_backtesting_mix_models.csv') #the dataset with the probabilities of default
 columns_test = ["competing1","competing2","rate"]
 
 
@@ -32,7 +28,7 @@ if __name__ == "__main__":
     probas = pd.read_csv(path_proba)
     df_new_preds = pd.read_csv(path_new_set,index_col="id")
     index_ids = df_new_preds.index
-    df_preds = compute_interest_rates_reject_higher_1(probas, 0.02,index_ids)
+    df_preds = compute_interest_rates_reject_higher_1(probas, 0.04,index_ids)
     df_past_results = pd.read_csv(os.path.join(data_path,"profit_31.csv"))
     df_back_test = df_past_results.merge(df_preds,on='id',how="inner")
     df_back_test["winner"] = df_back_test[columns_test].min(axis=1)
