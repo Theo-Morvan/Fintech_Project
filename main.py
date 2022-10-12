@@ -22,6 +22,7 @@ path = os.path.join(data_path,"PastLoans.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
 path_output = root + '/data'
 
+scale_pos_weight=4
 
 #path = os.path.join("data","PastLoans.csv")
 #path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
@@ -78,14 +79,16 @@ if __name__ == "__main__":
     #print(study.best_trial.params)
 
     # Optimize hyperparameters and train
-    optuna_objective = create_optuna_pipeline_xgboost(X_train_final, y_train, X_val_final, y_val)
+    optuna_objective = create_optuna_pipeline_xgboost(X_train_final, y_train, X_val_final, y_val, scale_pos_weight=scale_pos_weight)
     study = optuna.create_study(direction="maximize")
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    study.optimize(optuna_objective, n_trials=10, n_jobs=-1, show_progress_bar=True)
+    study.optimize(optuna_objective, n_trials=50, n_jobs=-1, show_progress_bar=True)
     trial = study.best_trial
+    print(f"Best value : {study.best_value}")
 
-    model_xgb = XGBClassifier(**trial.params)
-    model_xgb.fit(X_train_final,y_train)
+    # Train with best params
+    model_xgb = XGBClassifier(scale_pos_weight=scale_pos_weight, **trial.params)
+    model_xgb.fit(X_train_final, y_train)
 
     #params_logistic = study.best_trial.params
     #params_logistic["penalty"]="elasticnet"
