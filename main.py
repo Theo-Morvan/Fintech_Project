@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 import os
 import seaborn as sns
+from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import OneHotEncoder
 import xgboost
 from pipeline_functions import *
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     params_logistic["solver"]="saga"
     params_logistic["class_weight"]="balanced"
     # model_logistic = LogisticRegression(penalty="elasticnet",solver="saga",class_weight="balanced",l1_ratio=0.5)
-    model_logistic = QuadraticDiscriminantAnalysis()
+    model_logistic = LogisticRegression()
 
     sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
     model_xgb.fit(X_train_final,y_train, sample_weight=sample_weights)
