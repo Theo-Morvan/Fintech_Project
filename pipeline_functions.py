@@ -81,8 +81,8 @@ def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
             }
         # minimum child weight, larger the term more conservative the tree.
 
-        sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
-        model = XGBClassifier(**params)
+        sample_weights = compute_sample_weight(class_weight="balanced", y=y_train)
+        model = XGBClassifier(scale_pos_weight=scale_pos_weight, **params)
         model.fit(X_train, y_train, sample_weight=sample_weights)
         preds = model.predict(X_val)
         # ipdb.set_trace()
@@ -252,7 +252,7 @@ def create_complete_pipeline(X, y, number_cv):
     
     return optuna_objective
 
-def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
+def create_logistic_regression_pipeline(preds_1, preds_2, y_true):
 
     def optuna_objective(trial):
         params = {
@@ -262,7 +262,7 @@ def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
             "class_weight":"balanced",
         }
         model = LogisticRegression(**params)
-        X = np.concatenate((preds_1.reshape(-1,1),preds_2.reshape(-1,1)),axis=1)
+        X = np.concatenate((preds_1.reshape(-1,1), preds_2.reshape(-1,1)), axis=1)
         model.fit(X, y_true)
 
         preds = model.predict(X)

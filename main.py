@@ -22,9 +22,12 @@ data_path = os.path.join(dirname(root), 'data')
 path = os.path.join(data_path,"augmented_data.csv")
 path_new_set = os.path.join(data_path,"NewApplications_3_Round1.csv")
 path_output = os.path.join(root + '/data', 'default_predictions_backtesting_mix_models.csv')
+path_output = root + '/data'
 
-path = os.path.join("data","PastLoans.csv")
-path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
+scale_pos_weight=4
+
+#path = os.path.join("data","PastLoans.csv")
+#path_new_set = os.path.join("data","NewApplications_3_Round1.csv")
 
 save = True
 
@@ -95,7 +98,7 @@ if __name__ == "__main__":
     df_new_preds = pd.read_csv(path_new_set,index_col="id")
     X_new = df_new_preds.iloc[:,:]
     X_new_scaled = pipeline.transform(X_new)
-    preds_lgbm = model_lgbm.predict_proba(X_new_scaled)
+    #preds_lgbm = model_lgbm.predict_proba(X_new_scaled)
     preds_xgb = model_xgb.predict_proba(X_new_scaled)
     preds_logistic = model_logistic.predict_proba(X_new_scaled)
 
@@ -124,5 +127,27 @@ if __name__ == "__main__":
     # ipdb.set_trace()
     # df_preds[['id', 'Proba Default']].to_csv(path_output, header=True, index=False)
     
-
+    #final_proba = model_logistic.predict_proba(
+    #    np.concatenate((preds_lgbm.reshape(-1,1), preds_xgb.reshape(-1,1)),axis=1)
+    #    )[:,1]
     
+    #predictions = optimal_mix_probas(preds_lgbm, preds_xgb, **params_weights)
+    #df_preds = pd.DataFrame(predictions, columns=["Proba no Default","Proba Default"])
+    df_preds = pd.DataFrame(preds_xgb, columns=["Proba no Default", "Proba Default"])
+    df_preds["id"] = df_new_preds.index
+    df_preds[["id", "Proba Default"]].to_csv(os.path.join(path_output, "default_predictions.csv"), header=True, index=False)
+
+    # Emit rates
+    df_preds["break_even_rate"] = df_preds["Proba Default"]/(1-df_preds["Proba Default"])
+    df_preds[["id", "break_even_rate"]].to_csv(os.path.join(path_output, "break_even_rate.csv"), header=True, index=False)
+
+    df_preds["rate"] = df_preds.break_even_rate + 0.03 + df_preds.break_even_rate/10
+    df_preds.loc[df_preds["rate"] > 1, "rate"] = np.nan
+    df_preds[["id", "rate"]].to_csv(os.path.join(path_output, "final_ratings.csv"), header=True, index=False)
+
+    # Plot
+    #fig, ax = plt.subplots(1,1,figsize=(12,10))
+    #sns.distplot(final_proba)
+    #plt.show()
+
+    # ipdb.set_trace()
