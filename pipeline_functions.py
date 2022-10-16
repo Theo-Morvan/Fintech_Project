@@ -46,7 +46,7 @@ def imbalance_correction(y):
 
     pass
 
-def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
+def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val, scale_pos_weight):
 
     def optuna_objective(trial):
         params = {
@@ -64,8 +64,8 @@ def create_optuna_pipeline_xgboost(X_train,y_train, X_val, y_val):
             }
         # minimum child weight, larger the term more conservative the tree.
 
-        sample_weights = compute_sample_weight(class_weight="balanced",y = y_train)
-        model = XGBClassifier(**params)
+        sample_weights = compute_sample_weight(class_weight="balanced", y=y_train)
+        model = XGBClassifier(scale_pos_weight=scale_pos_weight, **params)
         model.fit(X_train, y_train, sample_weight=sample_weights)
         preds = model.predict(X_val)
         # ipdb.set_trace()
@@ -115,7 +115,7 @@ def optimal_mix_predictions(preds_1,preds_2,**kwargs):
         final_class = (value>=0.5)*1
     return final_class
 
-def optimal_mix_probas(preds_1,preds_2,**kwargs):
+def optimal_mix_probas(preds_1, preds_2, **kwargs):
     if "weight" in list(kwargs.keys()):
         weight = kwargs["weight"]
         value = weight*preds_1 + (1-weight)*preds_2
@@ -178,7 +178,7 @@ def create_complete_pipeline(X_train,y_train, X_val, y_val):
     
     return optuna_objective
 
-def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
+def create_logistic_regression_pipeline(preds_1, preds_2, y_true):
 
     def optuna_objective(trial):
         params = {
@@ -188,7 +188,7 @@ def create_logistic_regression_pipeline(preds_1,preds_2,y_true):
             "class_weight":"balanced",
         }
         model = LogisticRegression(**params)
-        X = np.concatenate((preds_1.reshape(-1,1),preds_2.reshape(-1,1)),axis=1)
+        X = np.concatenate((preds_1.reshape(-1,1), preds_2.reshape(-1,1)), axis=1)
         model.fit(X, y_true)
 
         preds = model.predict(X)
